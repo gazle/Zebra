@@ -1,0 +1,201 @@
+﻿<Window x:Class="Zebra.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:my="clr-namespace:Zebra" mc:Ignorable="d" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" Title="Zebra Chess" Height="640" Width="880">
+    <Window.DataContext>
+        <my:ViewModel/>
+    </Window.DataContext>
+    <Window.Resources>
+        <my:WrapPanelItemWidthConverter x:Key="wpiwConverter"/>
+        <my:ChessPieceToBitmapImageConverter x:Key="chessPieceToBitmapImageConverter"/>
+        <my:RankToCanvasConverter x:Key="rankToCanvasConverter"/>
+        <my:FileToCanvasConverter x:Key="fileToCanvasConverter"/>
+        <my:PlyToSelectionIndexConverter x:Key="plyToSelectionIndexConverter"/>
+        <my:PlyToFullMoveConverter x:Key="plyToFullMoveConverter"/>
+        <my:CollapseIfOddConverter x:Key="collapseIfOddConverter"/>
+        <my:BoolToDockTopConverter x:Key="boolToDockTopConverter"/>
+        <my:BoolToDockBottomConverter x:Key="boolToDockBottomConverter"/>
+        <my:NotConverter x:Key="notConverter"/>
+        <Style x:Key="DisabledWhenSearching" TargetType="Control">
+            <Setter Property="IsEnabled" Value="{Binding IsSearching, Converter={StaticResource notConverter}}"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="100*" />
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="150" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100*" />
+                <RowDefinition Height="50" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100*" />
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="80*" />
+            </Grid.ColumnDefinitions>
+            <DockPanel Name="dock1" my:Behavior.IsFlipped="{Binding ElementName=tbnFlip, Path=IsChecked}" VerticalAlignment="Center" LastChildFill="True">
+                <Menu DockPanel.Dock="Top" HorizontalAlignment="Left" Name="menu1" VerticalAlignment="Top" Width="{Binding ElementName=dock1, Path=ActualWidth}">
+                    <MenuItem Header="File">
+                        <MenuItem Header="New Game" Command="{Binding NewGameCommand}" Style="{StaticResource DisabledWhenSearching}"/>
+                        <MenuItem Header="Load PGN" />
+                        <MenuItem Header="Save..." my:Behavior.SaveCommand="{Binding SaveCommand}" />
+                        <Separator />
+                        <MenuItem Header="Exit" />
+                    </MenuItem>
+                    <MenuItem Header="Options">
+                        <MenuItem>
+                            <MenuItem.Header>
+                                <ToggleButton Content="Flip" FontSize="22" Name="tbnFlip" />
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </MenuItem>
+                </Menu>
+                <TextBlock DockPanel.Dock="{Binding Path=(my:Behavior.IsFlipped), RelativeSource={RelativeSource Self}, Converter={StaticResource boolToDockBottomConverter}}" FontSize="22" Text="Black"/>
+                <TextBlock DockPanel.Dock="{Binding Path=(my:Behavior.IsFlipped), RelativeSource={RelativeSource Self}, Converter={StaticResource boolToDockTopConverter}}" FontSize="22" Text="White"/>
+                <Viewbox Grid.ColumnSpan="1">
+                    <ItemsControl ItemsSource="{Binding ChessPieces}" Width="1600" Height="1600">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style>
+                                <Setter Property="my:Behavior.DragCommand" Value="{Binding DataContext.MovePieceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                                <Setter Property="my:ChessGrid.File" Value="{Binding File}"/>
+                                <Setter Property="my:ChessGrid.Rank" Value="{Binding Rank}"/>
+                                <Setter Property="Canvas.Left">
+                                    <Setter.Value>
+                                        <MultiBinding Converter="{StaticResource fileToCanvasConverter}">
+                                            <Binding Path="(my:ChessGrid.File)" RelativeSource="{RelativeSource Self}"/>
+                                            <Binding Path="(my:Behavior.IsFlipped)" RelativeSource="{RelativeSource Self}"/>
+                                        </MultiBinding>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Canvas.Top">
+                                    <Setter.Value>
+                                        <MultiBinding Converter="{StaticResource rankToCanvasConverter}">
+                                            <Binding Path="(my:ChessGrid.Rank)" RelativeSource="{RelativeSource Self}"/>
+                                            <Binding Path="(my:Behavior.IsFlipped)" RelativeSource="{RelativeSource Self}"/>
+                                        </MultiBinding>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Image Source="{Binding Converter={StaticResource chessPieceToBitmapImageConverter}}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas ClipToBounds="True">
+                                    <Canvas.Background>
+                                        <DrawingBrush Stretch="None" TileMode="Tile" Viewport="0,0,400,400" ViewportUnits="Absolute">
+
+                                            <!-- a drawing of 4 checkerboard tiles -->
+                                            <DrawingBrush.Drawing>
+                                                <DrawingGroup>
+
+                                                    <!-- checkerboard background -->
+                                                    <GeometryDrawing Brush="Bisque">
+                                                        <GeometryDrawing.Geometry>
+                                                            <RectangleGeometry Rect="0,0,400,400" />
+                                                        </GeometryDrawing.Geometry>
+                                                    </GeometryDrawing>
+
+                                                    <!-- two checkerboard foreground tiles -->
+                                                    <GeometryDrawing Brush="White">
+                                                        <GeometryDrawing.Geometry>
+                                                            <GeometryGroup>
+                                                                <RectangleGeometry Rect="0,0,200,200" />
+                                                                <RectangleGeometry Rect="200,200,200,200" />
+                                                            </GeometryGroup>
+                                                        </GeometryDrawing.Geometry>
+                                                    </GeometryDrawing>
+
+                                                </DrawingGroup>
+                                            </DrawingBrush.Drawing>
+                                        </DrawingBrush>
+                                    </Canvas.Background>
+                                </Canvas>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Viewbox>
+            </DockPanel>
+            <DockPanel Grid.Column="2" LastChildFill="True">
+                <ListBox ItemsSource="{Binding PossibleMoves}" Name="listBox1" Width="50" Background="#FFD9FFD6" DockPanel.Dock="Right">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="my:EventToCommand.PreviewMouseDown" Value="{Binding DataContext.MakeMoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+                <ListBox ItemsSource="{Binding MoveHistory}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" my:EventToCommand.PlyUpdated="{Binding GotoGamePlyCommand}" PreviewKeyDown="ListBox_PreviewKeyDown" BorderThickness="0">
+                    <ListBox.SelectedIndex>
+                        <MultiBinding Converter="{StaticResource plyToSelectionIndexConverter}" Mode="OneWay">
+                            <MultiBinding.Bindings>
+                                <!--Converter adds the two together and subtracts 1-->
+                                <Binding Path="GameStartPly"/>
+                                <Binding Path="CurrentGamePly"/>
+                            </MultiBinding.Bindings>
+                        </MultiBinding>
+                    </ListBox.SelectedIndex>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Margin" Value="3"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem  Command="{Binding MakeMovesFromClipboardCommand}" Header="Paste eet" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" TextBlock.FontSize="18">
+                                <TextBlock Text="{Binding GamePlyNr, Converter={StaticResource plyToFullMoveConverter}, StringFormat={}{0}.}" Visibility="{Binding GamePlyNr, Converter={StaticResource collapseIfOddConverter}}"/>
+                                <TextBlock Text="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </DockPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" TextElement.FontSize="15" Grid.Row="1">
+                <StackPanel.Resources>
+                    <Style TargetType="Button" BasedOn="{StaticResource DisabledWhenSearching}">
+                        <Setter Property="Margin" Value="8"/>
+                        <Setter Property="Background" Value="PaleVioletRed"/>
+                    </Style>
+                </StackPanel.Resources>
+                <Button Content="Start" Command="{Binding GotoStartCommand}"/>
+                <Button Command="{Binding UndoMoveCommand}" Name="button1">
+                    <Image Source="/Zebra;component/Images/backwards.png" />
+                </Button>
+                <Button Command="{Binding MakeRandomMoveCommand}" Content="Random Move" Grid.Row="1" Name="button2"/>
+                <Button Command="{Binding RemakeMoveCommand}">
+                    <Image Source="/Zebra;component/Images/forwards.png" />
+                </Button>
+                <Button Content="End" Command="{Binding GotoEndCommand}"/>
+                <Button Content="Search" Command="{Binding MakeBestMoveCommand}"/>
+                <Button Content="Stop" Command="{Binding StopSearchCommand}" IsEnabled="{Binding IsSearching}"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="2">
+                <TextBlock Grid.Column="2" Grid.Row="1" Height="23" Name="textBlock1" Text="{Binding HashKey}" HorizontalAlignment="Center" />
+            </StackPanel>
+            <GridSplitter Grid.Column="1" Grid.RowSpan="2" HorizontalAlignment="Stretch" Name="gridSplitter1" Width="10" Background="YellowGreen"/>
+        </Grid>
+        <GridSplitter VerticalAlignment="Center" HorizontalAlignment="Stretch" Height="10" Background="Green" Grid.Row="1"/>
+        <DockPanel Grid.Row="2" LastChildFill="True">
+            <StatusBar DockPanel.Dock="Top" Background="AliceBlue" Height="28">
+                <TextBlock Text="{Binding NodesEvaluated}"/>
+            </StatusBar>
+            <TextBox my:Behavior.ScrollOnTextChanged="True" Text="{Binding EngineText}" Background="Beige" Name="txtEngine" VerticalScrollBarVisibility="Auto" />
+        </DockPanel>
+    </Grid>
+</Window>
